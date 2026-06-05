@@ -207,7 +207,7 @@ async function main() {
   });
 
   // Start the HTTP server
-  const httpServer = app.listen(PORT, () => {
+  app.listen(PORT, () => {
     logger.info(`MCP Bridge HTTP server listening on port ${PORT}`);
     logger.info(`SSE endpoint available at ${PUBLIC_URL}/sse`);
     logger.info(`Message endpoint available at ${PUBLIC_URL}/message`);
