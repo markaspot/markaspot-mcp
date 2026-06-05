@@ -1,0 +1,13 @@
+# pnpm 11 config, mirrored from the Mark-a-Spot frontend for DHI + pnpm parity.
+# Settings that used to live under `pnpm.*` in package.json (and the removed
+# `onlyBuiltDependencies` key) moved here in pnpm 11.
+autoInstallPeers: false
+shamefullyHoist: true
+strictPeerDependencies: false
+
+# pnpm 11 blocks postinstall build scripts by default (supply-chain hardening).
+# esbuild ships a native binary built via its install script; tsup needs it,
+# so it must be explicitly allowed or the build fails with "Cannot find module
+# 'esbuild'". Everything else stays blocked.
+allowBuilds:
+  esbuild: true

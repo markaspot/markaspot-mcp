@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+.output/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+
+# Environment files (real secrets are never committed; only the examples are tracked)
+.env
+.env.*
+!.env.example
+
+# Caches
+.cache/
+.nyc_output/
+coverage/
+
+# Temporary files
+tmp/
+temp/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local developer tooling configs (machine-specific, not for the repo)
+superassistant-config.json

@@ -1,0 +1,88 @@
+name: Docker Build
+
+# Builds and pushes the MCP bridge image to Docker Hub.
+#
+# The Dockerfile builds FROM dhi.io/node:24 (Docker Hardened Images). Pulling
+# those base layers requires a Docker Hub account with an active DHI subscription
+# - the same DOCKER_HUB_USERNAME / DOCKER_HUB_ACCESS_TOKEN secrets the frontend
+# CI uses. The single docker/login-action authorizes both the dhi.io base pulls
+# and the push of markaspot/markaspot-mcp.
+#
+# Requires repo secrets: DOCKER_HUB_USERNAME, DOCKER_HUB_ACCESS_TOKEN.
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: markaspot/markaspot-mcp
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Single login authorizes both the dhi.io base-image pulls (DHI subscription)
+      # and the push of the built image. Same secret convention as the frontend CI.
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Derive image tags
+        id: meta
+        env:
+          GITHUB_REF_VALUE: ${{ github.ref }}
+          IMAGE_VALUE: ${{ env.IMAGE }}
+        run: |
+          set -euo pipefail
+          tags="${IMAGE_VALUE}:latest"
+          if [[ "$GITHUB_REF_VALUE" == refs/tags/v* ]]; then
+            tags="${tags}"$'\n'"${IMAGE_VALUE}:${GITHUB_REF_VALUE#refs/tags/}"
+          fi
+          {
+            echo 'tags<<EOF'
+            printf '%s\n' "$tags"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          provenance: true
+          sbom: true
+          platforms: linux/amd64
+          cache-from: type=gha,scope=mcp-amd64
+          cache-to: type=gha,scope=mcp-amd64,mode=max
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Build summary
+        run: |
+          echo "## MCP Bridge Build Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Branch/Tag:** ${{ github.ref }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Published tags:**" >> "$GITHUB_STEP_SUMMARY"
+          while IFS= read -r tag; do
+            [[ -n "$tag" ]] || continue
+            echo "  - $tag" >> "$GITHUB_STEP_SUMMARY"
+          done <<'EOF'
+          ${{ steps.meta.outputs.tags }}
+          EOF

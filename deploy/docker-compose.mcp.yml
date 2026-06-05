@@ -1,0 +1,65 @@
+# GeoReport MCP Bridge - per-stack service for Mark-a-Spot Cloud (cp1).
+#
+# This is NOT a standalone stack. It mirrors the shared-service pattern of
+# docker-compose.ai.yml: ONE image (markaspot/markaspot-mcp:latest) built once on
+# the host, run as a per-tenant service so each tenant's bridge is scoped to its
+# own backend + token set. Co-located on the `traefik` network so the bridge can
+# reach the tenant nginx at the internal hostname (e.g. http://demo-nginx-1:8080)
+# without a public hairpin.
+#
+# Wiring into /opt/markaspot-cloud (analogous to the `ai` block in deploy.sh):
+#   docker compose --env-file tenants/<tenant>.mcp.env -p <tenant>-mcp \
+#     -f deploy/docker-compose.mcp.yml up -d
+#
+# The router host, env file and project name are per-tenant; the image is shared.
+# All tenant-specific values come from tenants/<tenant>.mcp.env (see mcp.env.example):
+#   MCP_PUBLIC_HOST   e.g. mcp.demo.mark-a-spot.com   (Traefik Host rule)
+#   plus the app ENV (TENANTS_CONFIG, MCP_AUTH_USERS, ENABLED_TOOLSETS, ...)
+
+services:
+  mcp:
+    # Pre-built published image (analogous to the markaspot-ui `ui` service),
+    # pulled from Docker Hub. Built + pushed by the georeport-mcp CI
+    # (.github/workflows/docker-build.yml); markaspot-cloud only references it,
+    # no build context. Override the tag per environment via MCP_IMAGE.
+    image: ${MCP_IMAGE:-markaspot/markaspot-mcp:latest}
+    container_name: ${MCP_PROJECT:-mcp}-bridge
+    restart: unless-stopped
+    env_file:
+      - ${MCP_ENV_FILE:-./mcp.env}   # tenants/<tenant>.mcp.env, chmod 600, never committed
+    networks:
+      - traefik                       # Traefik bus + internal reach to <tenant>-nginx-1
+    volumes:
+      - mcp_uploads:/data/uploads
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      # Router + service names are namespaced per tenant to avoid collisions when
+      # multiple bridges run on the same Traefik instance.
+      - "traefik.http.routers.${MCP_PROJECT:-mcp}-bridge.rule=Host(`${MCP_PUBLIC_HOST}`)"
+      - "traefik.http.routers.${MCP_PROJECT:-mcp}-bridge.entrypoints=https"
+      - "traefik.http.routers.${MCP_PROJECT:-mcp}-bridge.tls=true"
+      - "traefik.http.routers.${MCP_PROJECT:-mcp}-bridge.tls.certresolver=letsencrypt"
+      # gzip-compress@file + security-headers@file are the cp1 file-provider
+      # middlewares already used by every tenant nginx router, so they resolve.
+      # The rate-limit middleware is defined inline and namespaced per tenant.
+      - "traefik.http.routers.${MCP_PROJECT:-mcp}-bridge.middlewares=gzip-compress@file,security-headers@file,${MCP_PROJECT:-mcp}-ratelimit"
+      - "traefik.http.middlewares.${MCP_PROJECT:-mcp}-ratelimit.ratelimit.average=60"
+      - "traefik.http.middlewares.${MCP_PROJECT:-mcp}-ratelimit.ratelimit.burst=20"
+      - "traefik.http.middlewares.${MCP_PROJECT:-mcp}-ratelimit.ratelimit.period=1m"
+      - "traefik.http.services.${MCP_PROJECT:-mcp}-bridge.loadbalancer.server.port=3100"
+    healthcheck:
+      # Node-based check: the DHI runtime image has no shell/wget. Node 24 ships
+      # a global fetch(). Mirrors the Dockerfile HEALTHCHECK.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3100/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+networks:
+  traefik:
+    external: true
+
+volumes:
+  mcp_uploads:

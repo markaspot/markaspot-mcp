@@ -1,0 +1,58 @@
+{
+  "name": "markaspot-mcp",
+  "version": "0.2.0",
+  "description": "MCP Server for GeoReport v2 (Open311) API",
+  "type": "module",
+  "main": "dist/server.js",
+  "packageManager": "pnpm@11.1.2",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup src/server.ts --format esm --platform node --target node22 --clean",
+    "start": "node dist/server.js",
+    "test": "vitest",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist logs",
+    "prebuild": "pnpm run clean"
+  },
+  "keywords": [
+    "mcp",
+    "georeport",
+    "open311",
+    "model-context-protocol",
+    "civic-tech"
+  ],
+  "author": "Civic Patches GmbH",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/markaspot/markaspot-mcp.git"
+  },
+  "homepage": "https://github.com/markaspot/markaspot-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/markaspot/markaspot-mcp/issues"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "winston": "^3.11.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^6.18.1",
+    "@typescript-eslint/parser": "^6.18.1",
+    "eslint": "^8.56.0",
+    "tsup": "^8.5.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  }
+}
