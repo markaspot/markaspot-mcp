@@ -23,7 +23,10 @@ export interface JsonRpcResponse {
 export interface DispatchOptions {
   registry: Map<string, Tool>;
   serverInfo: { name: string; version: string };
-  buildInstructions: () => string | Promise<string>;
+  // Receives the caller's context so instructions can be scoped to it: on a
+  // shared multi-tenant gateway the tenant registry is the customer list and
+  // must not be enumerable through the (open) initialize handshake.
+  buildInstructions: (ctx: UserContext) => string | Promise<string>;
   toolsetForTool: (name: string) => string;
   isToolDeploymentEnabled: (name: string) => boolean;
   staffToolsets: Set<string>;
@@ -74,7 +77,9 @@ export async function dispatchMcp(
   }
 
   // initialize is open: the handshake must succeed before the client can send
-  // its token. It exposes no data beyond protocol version and server info.
+  // its token. Instructions are therefore built from the caller's context:
+  // unauthenticated handshakes get generic guidance only, tenant-pinned tokens
+  // see their own tenant, never the full registry.
   if (method === 'initialize') {
     return ok(id, {
       protocolVersion: '2024-11-05',
@@ -84,7 +89,7 @@ export async function dispatchMcp(
         prompts: { listChanged: true },
       },
       serverInfo: opts.serverInfo,
-      instructions: await opts.buildInstructions(),
+      instructions: await opts.buildInstructions(ctx),
     });
   }
 

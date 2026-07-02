@@ -23,6 +23,14 @@ customers keep their own `mcp.<tenant>...` instances (see `mcp.env.example`).
 - **Credential splitting:** the GeoReport API keys live only in
   `TENANTS_CONFIG` on the server. Marketplace and customers only ever see the
   MCP token; revoking it never compromises the backend key.
+- **Scoped handshake:** `initialize` is open (pre-auth), so its instructions
+  are built from the caller's context: anonymous handshakes get generic
+  guidance, a pinned token sees only its own tenant. The tenant registry (=
+  customer list) is never enumerable.
+- **Known limitation, shared rate limit:** the Traefik limit is one bucket per
+  router, i.e. shared by all gateway organizations (availability, not
+  confidentiality). Scale `MCP_RATELIMIT_*` in the env file with the customer
+  count; move to token-keyed limiting when volume justifies it.
 
 ## First deploy (cp1)
 

@@ -43,10 +43,13 @@ services:
       # gzip-compress@file + security-headers@file are the cp1 file-provider
       # middlewares already used by every tenant nginx router, so they resolve.
       # The rate-limit middleware is defined inline and namespaced per tenant.
+      # It is one bucket per ROUTER: fine for a per-tenant bridge, but a shared
+      # gateway serves many organizations through one router, so its env file
+      # must scale the numbers with the customer count (gateway.env.example).
       - "traefik.http.routers.${MCP_PROJECT:-mcp}-bridge.middlewares=gzip-compress@file,security-headers@file,${MCP_PROJECT:-mcp}-ratelimit"
-      - "traefik.http.middlewares.${MCP_PROJECT:-mcp}-ratelimit.ratelimit.average=60"
-      - "traefik.http.middlewares.${MCP_PROJECT:-mcp}-ratelimit.ratelimit.burst=20"
-      - "traefik.http.middlewares.${MCP_PROJECT:-mcp}-ratelimit.ratelimit.period=1m"
+      - "traefik.http.middlewares.${MCP_PROJECT:-mcp}-ratelimit.ratelimit.average=${MCP_RATELIMIT_AVG:-60}"
+      - "traefik.http.middlewares.${MCP_PROJECT:-mcp}-ratelimit.ratelimit.burst=${MCP_RATELIMIT_BURST:-20}"
+      - "traefik.http.middlewares.${MCP_PROJECT:-mcp}-ratelimit.ratelimit.period=${MCP_RATELIMIT_PERIOD:-1m}"
       - "traefik.http.services.${MCP_PROJECT:-mcp}-bridge.loadbalancer.server.port=3100"
     healthcheck:
       # Node-based check: the DHI runtime image has no shell/wget. Node 24 ships

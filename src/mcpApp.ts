@@ -47,19 +47,36 @@ const toolRegistry = new Map<string, Tool>([
   ['get_stats', getStatsTool],
 ]);
 
-/** Build the initialize instructions from tenant config and jurisdictions. */
-function buildInstructions(): string {
-  const tenants = getAllTenants();
-  const tenantNames = tenants.map((t) => t.name).join(', ');
+/**
+ * Build the initialize instructions from tenant config and jurisdictions,
+ * scoped to the caller: initialize is an open handshake, and on a shared
+ * multi-tenant gateway the tenant registry is the customer list. Anonymous
+ * callers get generic guidance, a tenant-pinned token sees only its own
+ * tenant, and only an unpinned operator token sees the full registry.
+ */
+function buildInstructions(ctx: UserContext): string {
+  let connectedInfo = '';
+  if (ctx.authenticated) {
+    const tenants = ctx.tenant
+      ? getAllTenants().filter((t) => t.id === ctx.tenant)
+      : getAllTenants();
+    const tenantNames = tenants.map((t) => t.name).join(', ');
+    if (tenantNames) connectedInfo = `Connected to: ${tenantNames}. `;
+  }
 
   let jurisdictionInfo = '';
   const jurisdictionsJson = process.env.JURISDICTIONS;
-  if (jurisdictionsJson) {
+  if (ctx.authenticated && jurisdictionsJson) {
     try {
-      const jurisdictions = JSON.parse(jurisdictionsJson) as Array<{ id: string; name: string }>;
-      jurisdictionInfo =
-        ` Available jurisdictions (cities): ${jurisdictions.map((j) => `${j.name} (jurisdiction_id=${j.id})`).join(', ')}.` +
-        ` Always pass the appropriate jurisdiction_id when calling list_services, list_requests, get_stats or create_request.`;
+      let jurisdictions = JSON.parse(jurisdictionsJson) as Array<{ id: string; name: string }>;
+      if (ctx.allowedJurisdictions?.length) {
+        jurisdictions = jurisdictions.filter((j) => ctx.allowedJurisdictions!.includes(j.id));
+      }
+      if (jurisdictions.length) {
+        jurisdictionInfo =
+          `Available jurisdictions (cities): ${jurisdictions.map((j) => `${j.name} (jurisdiction_id=${j.id})`).join(', ')}.` +
+          ` Always pass the appropriate jurisdiction_id when calling list_services, list_requests, get_stats or create_request. `;
+      }
     } catch {
       /* ignore parse errors */
     }
@@ -67,7 +84,7 @@ function buildInstructions(): string {
 
   return (
     `You are connected to the GeoReport MCP Bridge, a citizen reporting system based on the Open311/GeoReport v2 standard. ` +
-    `Connected to: ${tenantNames}.${jurisdictionInfo} ` +
+    `${connectedInfo}${jurisdictionInfo}` +
     `Use list_services to see report categories, list_requests to browse existing reports, ` +
     `create_request to file new reports (requires lat/long from search_location and a service_code from list_services). ` +
     `For photo attachments, use prepare_upload to generate a browser upload link (do NOT use upload_image in chat). ` +
