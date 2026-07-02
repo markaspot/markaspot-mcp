@@ -20,6 +20,9 @@
 #     --api-key "$CITIZEN_KEY" --staff-api-key "$STAFF_KEY" \
 #     --jurisdictions 1 --default-jurisdiction 1 --default-lang de
 set -euo pipefail
+# Everything this script creates (backups of the env file) holds plaintext
+# secrets; make new files owner-only regardless of the caller's umask.
+umask 077
 
 usage() {
   sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'

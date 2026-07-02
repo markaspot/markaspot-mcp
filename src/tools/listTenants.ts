@@ -13,10 +13,20 @@ export const listTenantsTool: Tool = {
       properties: {},
     },
   },
-  handler: async () => {
+  handler: async (args: unknown) => {
     logger.info('Listing available tenants');
 
-    const tenants = getAllTenants();
+    // The dispatch overwrites args.tenant with the token's pin before this
+    // handler runs (mcpDispatch enforced.tenant). Honoring it here makes the
+    // tool safe by construction on shared multi-tenant gateways: a pinned
+    // token can never enumerate the tenant registry (= customer list), no
+    // matter which toolsets a deployment enables. Unpinned operator tokens
+    // (single-tenant Enterprise bridges) still see the full registry.
+    const { tenant } = (args ?? {}) as { tenant?: unknown };
+    let tenants = getAllTenants();
+    if (tenant) {
+      tenants = tenants.filter(t => t.id === String(tenant));
+    }
 
     // Return tenant info without exposing API keys or internal URLs
     const safeTenants = tenants.map(t => ({

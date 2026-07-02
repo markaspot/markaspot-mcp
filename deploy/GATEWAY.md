@@ -77,6 +77,8 @@ customers keep their own `mcp.<tenant>...` instances (see `mcp.env.example`).
 - Offboarding/rotation: remove or replace the tenant's entries in
   `TENANTS_CONFIG`/`MCP_AUTH_USERS` (env file backup is created on every script
   run) and recreate.
+- The `.bak-*` backups hold plaintext secrets (owner-only via umask, but they
+  accumulate); prune them once the change is verified.
 
 ## Marketplace notes (Ayunis)
 
