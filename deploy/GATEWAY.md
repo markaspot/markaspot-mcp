@@ -40,11 +40,16 @@ customers keep their own `mcp.<tenant>...` instances (see `mcp.env.example`).
 2. **Env file:** copy `gateway.env.example` to
    `/opt/markaspot-cloud/tenants/gateway.mcp.env`, `chmod 600`, replace the
    placeholder keys/token.
-3. **Start** (from `/opt/markaspot-cloud`):
+3. **Start** (from `/opt/markaspot-cloud`). `MCP_ENV_FILE` must be an ABSOLUTE
+   path: the compose `env_file` (`${MCP_ENV_FILE:-./mcp.env}`) resolves relative
+   to the compose file's directory (`/opt/mcp-bridge/deploy`), not the CWD, so a
+   bare start looks for `/opt/mcp-bridge/deploy/mcp.env` and fails. This mirrors
+   how `rollout-mcp.sh` starts the per-tenant bridges.
 
    ```bash
-   docker compose --env-file tenants/gateway.mcp.env -p gateway-mcp \
-     -f deploy/docker-compose.mcp.yml up -d
+   MCP_ENV_FILE=/opt/markaspot-cloud/tenants/gateway.mcp.env \
+     docker compose --env-file tenants/gateway.mcp.env -p gateway-mcp \
+     -f /opt/mcp-bridge/deploy/docker-compose.mcp.yml up -d
    ```
 
 4. **Smoke:**

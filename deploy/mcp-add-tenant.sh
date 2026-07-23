@@ -139,7 +139,10 @@ echo "  $TOKEN"
 echo
 echo "Apply the change (from /opt/markaspot-cloud):"
 echo
-echo "  docker compose --env-file tenants/$(basename "$ENV_FILE") -p gateway-mcp \\"
-echo "    -f deploy/docker-compose.mcp.yml up -d --force-recreate"
+# MCP_ENV_FILE must be ABSOLUTE: the compose env_file (${MCP_ENV_FILE:-./mcp.env})
+# resolves relative to the compose file's dir (/opt/mcp-bridge/deploy), not the CWD.
+echo "  MCP_ENV_FILE=$ENV_FILE \\"
+echo "    docker compose --env-file $ENV_FILE -p gateway-mcp \\"
+echo "    -f /opt/mcp-bridge/deploy/docker-compose.mcp.yml up -d --force-recreate"
 echo
 echo "Smoke: token pinned to '$TENANT_ID' must get FORBIDDEN on any other tenant."
