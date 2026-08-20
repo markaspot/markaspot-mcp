@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.1](https://github.com/markaspot/markaspot-mcp/compare/v1.0.0...v1.0.1) (2026-08-20)
+
+### Bug Fixes
+
+* align stateless discovery capabilities with the methods it safely supports
+
 ## [1.0.0](https://github.com/markaspot/markaspot-mcp/compare/v1.0.0-rc.0...v1.0.0) (2026-07-02)
 
 ### Features

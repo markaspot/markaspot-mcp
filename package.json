@@ -1,6 +1,6 @@
 {
   "name": "markaspot-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP Server for GeoReport v2 (Open311) API",
   "type": "module",
   "main": "dist/server.js",

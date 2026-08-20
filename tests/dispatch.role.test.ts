@@ -14,6 +14,7 @@ import {
 } from '../src/toolsets.js';
 
 const FORBIDDEN = -32003;
+const AUTH_REQUIRED = -32001;
 
 // A spy handler so we can assert the dispatch actually reached the tool (i.e.
 // gating passed) without any network.
@@ -53,6 +54,11 @@ function call(name: string, ctx: UserContext) {
   return dispatchMcp('tools/call', { name, arguments: {} }, 1, ctx, opts);
 }
 
+async function callSharedHandler(method: string, ctx: UserContext) {
+  const { handleMcp } = await import('../src/mcpApp.js');
+  return handleMcp(method, {}, 1, ctx);
+}
+
 describe('dispatch role gating', () => {
   beforeEach(() => {
     resetUserRegistry();
@@ -63,6 +69,9 @@ describe('dispatch role gating', () => {
     // Auth must be configured for the dispatch to leave the gate open.
     process.env.MCP_AUTH_USERS = JSON.stringify([
       { mcpToken: 'tok', name: 'Test' },
+    ]);
+    process.env.TENANTS_CONFIG = JSON.stringify([
+      { id: 'demo', name: 'Demo', apiUrl: 'http://demo', apiKey: 'key' },
     ]);
   });
 
@@ -108,6 +117,33 @@ describe('dispatch role gating', () => {
     expect(res?.error?.code).toBe(FORBIDDEN);
     expect(getStatsHandler).not.toHaveBeenCalled();
   });
+
+  it('initialize advertises only the supported tools capability', async () => {
+    const res = await callSharedHandler('initialize', { authenticated: false });
+
+    expect((res?.result as { capabilities: unknown }).capabilities).toEqual({ tools: {} });
+  });
+
+  it.each([
+    ['resources/list', { resources: [] }],
+    ['resources/templates/list', { resourceTemplates: [] }],
+    ['prompts/list', { prompts: [] }],
+  ])('%s returns a successful empty list', async (method, expected) => {
+    const ctx: UserContext = { authenticated: true, role: 'citizen' };
+    const res = await callSharedHandler(method, ctx);
+
+    expect(res?.error).toBeUndefined();
+    expect(res?.result).toEqual(expected);
+  });
+
+  it.each(['resources/list', 'resources/templates/list', 'prompts/list'])(
+    '%s remains behind the authentication gate',
+    async (method) => {
+      const res = await callSharedHandler(method, { authenticated: false });
+
+      expect(res?.error?.code).toBe(AUTH_REQUIRED);
+    },
+  );
 });
 
 describe('resolveUser no-auto-promote', () => {

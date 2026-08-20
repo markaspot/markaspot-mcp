@@ -84,9 +84,7 @@ export async function dispatchMcp(
     return ok(id, {
       protocolVersion: '2024-11-05',
       capabilities: {
-        tools: { listChanged: true },
-        resources: { listChanged: true, subscribe: false },
-        prompts: { listChanged: true },
+        tools: {},
       },
       serverInfo: opts.serverInfo,
       instructions: await opts.buildInstructions(ctx),
@@ -103,6 +101,19 @@ export async function dispatchMcp(
 
   if (method === 'tools/list') {
     return ok(id, { tools: visibleTools(opts, ctx).map((t) => t.definition) });
+  }
+
+  // Some clients probe discovery methods even when initialize does not
+  // advertise them. Keep these responses empty: the dev-only resource and
+  // prompt modules do not enforce this dispatcher's tenant and auth scoping.
+  if (method === 'resources/list') {
+    return ok(id, { resources: [] });
+  }
+  if (method === 'resources/templates/list') {
+    return ok(id, { resourceTemplates: [] });
+  }
+  if (method === 'prompts/list') {
+    return ok(id, { prompts: [] });
   }
 
   if (method === 'tools/call') {
