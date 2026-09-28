@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.2](https://github.com/markaspot/markaspot-mcp/compare/v1.0.1...v1.0.2) (2026-09-28)
+
+### Bug Fixes
+
+* rebuild on the current hardened Node base image, which ships OpenSSL 3.5.7 (CVE-2026-14456)
+
 ## [1.0.1](https://github.com/markaspot/markaspot-mcp/compare/v1.0.0...v1.0.1) (2026-08-20)
 
 ### Bug Fixes
