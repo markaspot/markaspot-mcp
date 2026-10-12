@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.4](https://github.com/markaspot/markaspot-mcp/compare/v1.0.3...v1.0.4) (2026-10-12)
+
+### Bug Fixes
+
+* **deps:** bump proxy-addr to 2.0.8 for CVE-2026-90711 ([e958df8](https://github.com/markaspot/markaspot-mcp/commit/e958df8ca89972b9d124e9271a2e3afee487f6df))
+
 ## [1.0.3](https://github.com/markaspot/markaspot-mcp/compare/v1.0.2...v1.0.3) (2026-10-01)
 
 ## [1.0.2](https://github.com/markaspot/markaspot-mcp/compare/v1.0.1...v1.0.2) (2026-09-28)
