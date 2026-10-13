@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 let extractBearerToken: typeof import('../src/mcpApp.js').extractBearerToken;
+let handleMcp: typeof import('../src/mcpApp.js').handleMcp;
+let resolveUser: typeof import('../src/utils/userContext.js').resolveUser;
 
 // Ayunis Core sends `Authorization: Bearer<token>` without the separating
 // space; strict parsing turned every call into an anonymous one (-32001).
@@ -11,7 +13,29 @@ describe('extractBearerToken', () => {
     process.env.TENANTS_CONFIG = JSON.stringify([
       { id: 'demo', name: 'Demo City', apiUrl: 'http://demo', apiKey: 'k1' },
     ]);
-    ({ extractBearerToken } = await import('../src/mcpApp.js'));
+    process.env.MCP_AUTH_USERS = JSON.stringify([
+      { mcpToken: 'tok123', name: 'Ayunis', tenant: 'demo' },
+    ]);
+    ({ extractBearerToken, handleMcp } = await import('../src/mcpApp.js'));
+    ({ resolveUser } = await import('../src/utils/userContext.js'));
+  });
+
+  it('lets a space-less Bearer header through to tools/list', async () => {
+    const ctx = resolveUser(extractBearerToken('Bearertok123'));
+    expect(ctx.authenticated).toBe(true);
+    const res = await handleMcp('tools/list', {}, 1, ctx);
+    expect(res?.error).toBeUndefined();
+    expect((res?.result as { tools: unknown[] }).tools.length).toBeGreaterThan(0);
+  });
+
+  it('still rejects a wrong token without the space', async () => {
+    const ctx = resolveUser(extractBearerToken('Bearerwrong'));
+    const res = await handleMcp('tools/list', {}, 1, ctx);
+    expect(res?.error?.code).toBe(-32001);
+  });
+
+  it('keeps a token that itself starts with "bearer"', () => {
+    expect(extractBearerToken('Bearerbearerxyz')).toBe('bearerxyz');
   });
 
   it('reads a standard Bearer header', () => {
