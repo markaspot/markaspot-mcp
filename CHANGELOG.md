@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.5](https://github.com/markaspot/markaspot-mcp/compare/v1.0.4...v1.0.5) (2026-10-13)
+
+### Bug Fixes
+
+* accept Bearer tokens without separating space ([c8cbacc](https://github.com/markaspot/markaspot-mcp/commit/c8cbacc86cedc626669886d4fe5f764f62f12995))
+
 ## [1.0.4](https://github.com/markaspot/markaspot-mcp/compare/v1.0.3...v1.0.4) (2026-10-12)
 
 ### Bug Fixes
