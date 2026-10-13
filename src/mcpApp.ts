@@ -95,13 +95,17 @@ function buildInstructions(ctx: UserContext): string {
   );
 }
 
-/** Extract a Bearer token from an Authorization header value. */
+/**
+ * Extract a Bearer token from an Authorization header value.
+ *
+ * Lenient about the scheme separator: some MCP clients (Ayunis Core, 10/2026)
+ * send `Bearer<token>` without the RFC 6750 space. The token itself is still
+ * matched exactly downstream, so this only widens the accepted syntax.
+ */
 export function extractBearerToken(authorization?: string | string[]): string | undefined {
   const header = Array.isArray(authorization) ? authorization[0] : authorization;
-  if (header?.startsWith('Bearer ')) {
-    return header.slice(7);
-  }
-  return undefined;
+  const match = header?.trim().match(/^bearer\s*(\S+)$/i);
+  return match?.[1];
 }
 
 /**
