@@ -40,13 +40,52 @@ export interface DispatchOptions {
 const AUTH_REQUIRED = -32001;
 const FORBIDDEN = -32003;
 const NOT_FOUND = -32601;
-const SERVER_ERROR = -32000;
 
 function ok(id: JsonRpcId, result: unknown): JsonRpcResponse {
   return { jsonrpc: '2.0', id, result };
 }
 function fail(id: JsonRpcId, code: number, message: string): JsonRpcResponse {
   return { jsonrpc: '2.0', id, error: { code, message } };
+}
+// Tool execution and argument errors go back as a tool result with isError
+// (MCP spec, tools: error handling), so the model can read the message and
+// retry with corrected arguments. Several clients drop JSON-RPC errors on
+// tools/call and show the model nothing (Ayunis renders `null`).
+function toolError(id: JsonRpcId, message: string): JsonRpcResponse {
+  return ok(id, { content: [{ type: 'text', text: message }], isError: true });
+}
+
+/**
+ * Tool definition as one token sees it: for jurisdiction-pinned tokens the
+ * jurisdiction_id description is replaced by the allowed values, and the tool
+ * description gets a note that overrides its generic "omit it to use the token
+ * default" wording, so the model picks a value instead of omitting it.
+ */
+function scopedDefinition(tool: Tool, ctx: UserContext, opts: DispatchOptions): Tool['definition'] {
+  const def = tool.definition;
+  const allowed = ctx.allowedJurisdictions;
+  const props = (def.inputSchema as any)?.properties;
+  if (!allowed?.length || !opts.jurisdictionTools.has(def.name) || !props?.jurisdiction_id) {
+    return def;
+  }
+  const hint =
+    allowed.length === 1
+      ? `This token is limited to jurisdiction_id ${allowed[0]}; it is applied automatically when omitted.`
+      : `Required for this token: pass one of jurisdiction_id ${allowed.join(', ')}. Omitting it fails.`;
+  return {
+    ...def,
+    description: `${def.description}\n\nFor this token: ${hint}`,
+    inputSchema: {
+      ...def.inputSchema,
+      properties: {
+        ...props,
+        jurisdiction_id: {
+          ...props.jurisdiction_id,
+          description: hint,
+        },
+      },
+    },
+  };
 }
 
 /** Tools visible to a user: deployment-enabled AND within the user's toolset scope. */
@@ -100,7 +139,7 @@ export async function dispatchMcp(
   }
 
   if (method === 'tools/list') {
-    return ok(id, { tools: visibleTools(opts, ctx).map((t) => t.definition) });
+    return ok(id, { tools: visibleTools(opts, ctx).map((t) => scopedDefinition(t, ctx, opts)) });
   }
 
   // Some clients probe discovery methods even when initialize does not
@@ -174,7 +213,11 @@ export async function dispatchMcp(
       const requested = args.jurisdiction_id ? String(args.jurisdiction_id) : undefined;
       if (requested) {
         if (!ctx.allowedJurisdictions.includes(requested)) {
-          return fail(id, FORBIDDEN, 'Access denied: jurisdiction not allowed for this token.');
+          logger.warn(`Denied ${name}: jurisdiction not allowed for token`, { user: ctx.name });
+          return toolError(
+            id,
+            `Access denied: jurisdiction_id ${requested.slice(0, 64)} is not allowed for this token; allowed: ${ctx.allowedJurisdictions.join(', ')}`,
+          );
         }
         enforced.jurisdiction_id = requested;
       } else if (ctx.allowedJurisdictions.length === 1) {
@@ -183,10 +226,9 @@ export async function dispatchMcp(
       } else {
         // Multiple allowed and none requested: do NOT fall through unfiltered
         // (that would leak every jurisdiction). Force the caller to choose.
-        return fail(
+        return toolError(
           id,
-          FORBIDDEN,
-          `jurisdiction_id is required for this token; allowed: ${ctx.allowedJurisdictions.join(', ')}`,
+          `jurisdiction_id is required for this token; allowed: ${ctx.allowedJurisdictions.join(', ')}. Call the tool again with one of them.`,
         );
       }
     }
@@ -199,7 +241,7 @@ export async function dispatchMcp(
       const message = e?.response
         ? `API Error: ${e.response.status} ${e.response.statusText}. ${JSON.stringify(maskSensitiveData(e.response.data))}`
         : maskSensitiveData(e?.message ?? 'Unknown error');
-      return fail(id, SERVER_ERROR, typeof message === 'string' ? message : 'Tool execution failed');
+      return toolError(id, typeof message === 'string' ? message : 'Tool execution failed');
     }
   }
 
