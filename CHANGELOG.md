@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.6](https://github.com/markaspot/markaspot-mcp/compare/v1.0.5...v1.0.6) (2026-10-14)
+
+### Bug Fixes
+
+* return tool argument and execution errors as isError results ([0337781](https://github.com/markaspot/markaspot-mcp/commit/0337781d6074207c135f35c496940a40afa35aac))
+
 ## [1.0.5](https://github.com/markaspot/markaspot-mcp/compare/v1.0.4...v1.0.5) (2026-10-13)
 
 ### Bug Fixes
