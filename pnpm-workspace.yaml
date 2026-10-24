@@ -5,6 +5,11 @@ autoInstallPeers: false
 shamefullyHoist: true
 strictPeerDependencies: false
 
+# Express 4 allows older body-parser releases. Require the compatible security
+# patch in the production graph.
+overrides:
+  express>body-parser: 1.20.9
+
 # pnpm 11 blocks postinstall build scripts by default (supply-chain hardening).
 # esbuild ships a native binary built via its install script; tsup needs it,
 # so it must be explicitly allowed or the build fails with "Cannot find module

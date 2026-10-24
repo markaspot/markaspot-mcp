@@ -21,7 +21,7 @@ const inputSchema = z.object({
   lang: z.string().optional(),
   tenant: z.string().optional(),
   jurisdiction_id: z.union([z.string(), z.number()]).transform(String).optional(),
-  attributes: z.record(z.string()).optional(),
+  attributes: z.record(z.string(), z.string()).optional(),
 });
 
 export const createRequestTool: Tool = {
