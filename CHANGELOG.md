@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.7](https://github.com/markaspot/markaspot-mcp/compare/v1.0.6...v1.0.7) (2026-10-26)
+
+### Bug Fixes
+
+* update vulnerable MCP runtime dependencies ([5748daa](https://github.com/markaspot/markaspot-mcp/commit/5748daa450b03463f6c7a5d67ee5906e67ce763a))
+
 ## [1.0.6](https://github.com/markaspot/markaspot-mcp/compare/v1.0.5...v1.0.6) (2026-10-14)
 
 ### Bug Fixes
